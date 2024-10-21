@@ -1,0 +1,17 @@
+blast_db:
+  silva: "/local/work/adrian/epicblast_sm/data/blast_db/silva_db"
+  card: "/local/work/adrian/epicblast_sm/data/blast_db/card_db"
+  blast: "/local/work/adrian/epicblast_sm/data/blast_db/"
+
+min_similarity: "0.8"
+
+paths:
+  fastq_dir: "/local/work/adrian/epicblast_sm/data/fastq"
+  output_dir: "/local/work/adrian/epicblast_sm/results"
+
+aro_mapping_path: "/local/work/adrian/epicblast_workingdir/card_db/aro_index.tsv"
+taxa_mapping_path: "/local/work/adrian/epicblast_workingdir/silva_db/taxmap_slv_lsu_parc_138.2.txt"
+
+silva:
+  download-path-seq: "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/SILVA_138.2_LSUParc_tax_silva.fasta.gz"
+  download-path-tax: "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/taxonomy/taxmap_slv_lsu_parc_138.2.txt.gz"

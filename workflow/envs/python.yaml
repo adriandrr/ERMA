@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+dependencies:
+  - pandas=1.2.5
+  - python
+  - bowtie2
+  - samtools
+  - matplotlib
+  - seaborn
+  - biopython
