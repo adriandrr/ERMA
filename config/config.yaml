@@ -15,3 +15,6 @@ taxa_mapping_path: "/local/work/adrian/epicblast_workingdir/silva_db/taxmap_slv_
 silva:
   download-path-seq: "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/SILVA_138.2_LSUParc_tax_silva.fasta.gz"
   download-path-tax: "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/taxonomy/taxmap_slv_lsu_parc_138.2.txt.gz"
+
+card:
+  download-path: https://card.mcmaster.ca/download/0/broadstreet-v3.3.0.tar.bz2
