@@ -19,13 +19,15 @@ rule decompress_fastq:
     output:
         temp("{base_dir}/data/fastq/{sample}.fastq")
     shell:
-        "gunzip -c {input} > {output}"
+        "gunzip {input}"
 
 rule convert_fastq_to_fasta:
     input:
         "{base_dir}/data/fastq/{sample}.fastq"
     output:
         temp("{base_dir}/data/fastq/{sample}.fasta")
+    conda:
+        "envs/python.yaml"        
     shell:
         "seqtk seq -a {input} > {output}"
 
@@ -37,6 +39,8 @@ rule blast_card:
         card_results = temp("{base_dir}/results/{sample}/card_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
+    conda:
+        "envs/blast.yaml"        
     shell:
         """
         blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 64
@@ -50,6 +54,8 @@ rule blast_silva:
         silva_results = temp("{base_dir}/results/{sample}/SILVA_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
+    conda:
+        "envs/blast.yaml"        
     shell:
         """
         blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 64
@@ -100,6 +106,8 @@ rule filter_blast_results:
         filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
     params:
         min_similarity = config["min_similarity"]
+    conda:
+        "envs/python.yaml"        
     script:
         "scripts/filter_blast_results.py"
 
@@ -130,6 +138,8 @@ rule generate_genus_top_hits:
         )
     params:
         sample_name = "{sample}"
+    conda:
+        "envs/python.yaml"        
     script:
         "scripts/genus_top_hits.py"
 
@@ -144,6 +154,8 @@ rule plot_evalue_boxplot:
         )
     params:
         min_similarity = config["min_similarity"]
+    conda:
+        "envs/python.yaml"        
     script:
         "scripts/evalue_boxplots.py"
 
@@ -158,6 +170,8 @@ rule plot_percentage_identity_boxplot:
         )
     params:
         min_similarity = config["min_similarity"]
+    conda:
+        "envs/python.yaml"        
     script:
         "scripts/percidt_boxplots.py"
 
@@ -172,6 +186,8 @@ rule plot_alignment_length_boxplot:
         )        
     params:
         min_similarity = config["min_similarity"]
+    conda:
+        "envs/python.yaml"        
     script:
         "scripts/align_lengths_boxplots.py"
 
@@ -183,9 +199,11 @@ rule plot_read_positions:
             "{base_dir}/results/{sample}/read_positions.png",
             caption = "../report/genus_top_hits.rst",
             category="3. General data",        
-        )                
+        )  
     params:
-        sample_name = "{sample}"        
+        sample_name = "{sample}"
+    conda:
+        "envs/python.yaml"
     script:
         "scripts/read_position.py"
 
@@ -198,6 +216,8 @@ rule generate_percidt_genus:
             caption = "../report/genus_top_hits.rst",
             category="2. Genus percentage Identity",
         )
+    conda:
+        "envs/python.yaml"
     script:
         "scripts/percidt_per_genus.py"
 
@@ -207,7 +227,9 @@ rule snakemake_report:
         expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),
         expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),
         expand("{base_dir}/results/{sample}/read_positions.png", sample=samples,base_dir=config["base_dir"]),
-        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png",base_dir=config["base_dir"])
+        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png",base_dir=config["base_dir"]),
+        expand("{base_dir}/results/boxplots/combined_allength_boxplot.png",base_dir=config["base_dir"]),
+        expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png",base_dir=config["base_dir"])
     output:
         "results/report.zip"
     shell:

@@ -3,9 +3,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 
+dtype_dict = {
+    "taxid": "float",
+    "ARO Accession": "string",
+    "CVTERM ID": "float",
+    "Model Sequence ID": "float",
+    "Model ID": "float",
+    "Model Name": "string",
+    "ARO Name": "string",
+    "Protein Accession": "string",
+    "DNA Accession": "string",
+    "AMR Gene Family": "string",
+    "Drug Class": "string",
+    "Resistance Mechanism": "string",
+    "CARD Short Name": "string",
+}
+
 def generate_read_position(input_file, output_file, sample_name):
     # Load the data
-    df = pd.read_csv(input_file, sep=",", header=0)
+    df = pd.read_csv(input_file, sep=",", header=0,dtype=dtype_dict)
     df = df[['query_id', 'most_common_q_start', 'most_common_q_end', 'part']]
 
     abr_data = df[df['part'] == 'ABR']
