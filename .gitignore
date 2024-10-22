@@ -1,7 +1,7 @@
-data/blast_db/*
-data/silva_db/*
-data/card_db/*
+data/*
+!data/fastq/
 data/fastq/*
+!.gitkeep
 logs/*
 results/*
 .gitignore
