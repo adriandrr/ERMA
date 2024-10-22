@@ -11,3 +11,4 @@ LICENSE
 README.md
 .github/*
 .snakemake/*
+config/config.yaml
