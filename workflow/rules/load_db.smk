@@ -1,62 +1,79 @@
 rule get_16S_db:
-        output:
-            seq="data/silva_db/silva_seq.fasta.gz",
-            tax="data/silva_db/silva_tax.txt.gz",
-        params:
-            seq=str(config["silva"]["download-path-seq"]),
-            tax=str(config["silva"]["download-path-tax"]),
-            path=str(config["blast_db"]["silva"])
-        conda:
-            "../envs/python.yaml"
-        shell:
-            "mkdir {params.path}; "
-            "cd {params.path}; "
-            "wget -O silva_seq.fasta.gz {params.seq}; "
-            "wget -O silva_tax.txt.gz {params.tax}; "
+    output:
+        seq = "{base_dir}/data/silva_db/silva_seq.fasta.gz",
+        tax = "{base_dir}/data/silva_db/silva_tax.txt.gz"
+    params:
+        seq = config["silva"]["download-path-seq"],
+        tax = config["silva"]["download-path-tax"],
+        path = "{base_dir}/data/silva_db"
+    conda:
+        "../envs/python.yaml"
+    shell:
+        """
+        mkdir -p {params.path};
+        cd {params.path};
+        wget -O silva_seq.fasta.gz {params.seq};
+        wget -O silva_tax.txt.gz {params.tax};
+        """
 
 rule unzip_silva_db:
     input:
-        seq="data/silva_db/silva_seq.fasta.gz",
-        tax="data/silva_db/silva_tax.txt.gz",
+        seq = "{base_dir}/data/silva_db/silva_seq.fasta.gz",
+        tax = "{base_dir}/data/silva_db/silva_tax.txt.gz"
     output:
-        seq=temp("data/silva_db/silva_seq.fasta"),
-        tax=temp("data/silva_db/silva_tax.txt"),
+        seq = "{base_dir}/data/silva_db/silva_seq.fasta",
+        tax = "{base_dir}/data/silva_db/silva_tax.txt"
     shell:
         """
-        gzip -dk {input.seq}
-        gzip -dk {input.tax}
+        gzip -dk {input.seq};
+        gzip -dk {input.tax};
         """
 
 rule get_card_db:
-        output:
-            seq="data/card_db/card_seq.tar.bz2",
-        params:
-            seq=str(config["card"]["download-path-seq"]),
-            path=str(config["blast_db"]["card"])
-        shell:
-            "mkdir {params.path}; "
-            "cd {params.path}; "
-            "wget -O card_seq.tar.bz2 {params.seq}; "
+    output:
+        seq = "{base_dir}/data/card_db/card_seq.tar.bz2"
+    params:
+        seq = config["card"]["download-path"],
+        path = "{base_dir}/data/card_db"
+    shell:
+        """
+        mkdir -p {params.path};
+        cd {params.path};
+        wget -O card_seq.tar.bz2 {params.seq};
+        """
 
 rule unzip_card_db:
     input:
-        seq="data/card_db/silva_seq.tar.bz2",
+        seq = "{base_dir}/data/card_db/card_seq.tar.bz2"
     output:
-        seq=temp("data/card_db/rotein_fasta_protein_homolog_model.fasta"),
-    shell:
-        "tar -xvjf {input.seq}"
-
-rule makeblastdb:
-    input:
-        seq1="data/card_db/rotein_fasta_protein_homolog_model.fasta"
-        seq2="data/silva_db/silva_seq.fasta"
-    output:
-        output1="data/blast_db/card_db.pdb"
-        output1="data/blast_db/silva_db.ndb"
+        seq = "{base_dir}/data/card_db/protein_fasta_protein_homolog_model.fasta"
     params:
-        path=str(config["blast_db"]["blast"])
+        path = "{base_dir}/data/card_db"
     shell:
         """
-        makeblastdb -in silva_seq.fasta -dbtype nucl -out {params.path}/silva_db
-        makeblastdb -in protein_fasta_protein_homolog_model.fasta -dbtype prot -out {params.path}/card_db
+        tar -xvjf {input.seq} -C {params.path};
+        """
+
+rule makeblastdb_card:
+    input:
+        seq = "{base_dir}/data/card_db/protein_fasta_protein_homolog_model.fasta"
+    output:
+        db = "{base_dir}/data/blast_db/card_db.pdb"
+    params:
+        path = "{base_dir}/data/blast_db/card_db"    
+    shell:
+        """
+        makeblastdb -in {input.seq} -dbtype prot -out {params.path};
+        """
+
+rule makeblastdb_silva:
+    input:
+        seq = "{base_dir}/data/silva_db/silva_seq.fasta"
+    output:
+        db = "{base_dir}/data/blast_db/silva_db.ndb"
+    params:
+        path = "{base_dir}/data/blast_db/silva_db"           
+    shell:
+        """
+        makeblastdb -in {input.seq} -dbtype nucl -out {params.path};
         """
