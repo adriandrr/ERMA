@@ -2,8 +2,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+dtype_dict = {
+    "taxid": "float",
+    "ARO Accession": "string",
+    "CVTERM ID": "float",
+    "Model Sequence ID": "float",
+    "Model ID": "float",
+    "Model Name": "string",
+    "ARO Name": "string",
+    "Protein Accession": "string",
+    "DNA Accession": "string",
+    "AMR Gene Family": "string",
+    "Drug Class": "string",
+    "Resistance Mechanism": "string",
+    "CARD Short Name": "string",
+}
+
 def generate_percentage_idt_per_genus(input_file, output_file):
-    df = pd.read_csv(input_file)
+    df = pd.read_csv(input_file,dtype=dtype_dict)
     df['species'] = df['path'].apply(lambda x: x.split(';')[-2] if pd.notna(x) else None)
 
     species_query_counts = df.groupby('species')['query_id'].nunique().reset_index()

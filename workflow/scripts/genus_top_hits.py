@@ -6,6 +6,22 @@ import warnings
 from pandas.errors import SettingWithCopyWarning
 warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
+dtype_dict = {
+    "taxid": "float",
+    "ARO Accession": "string",
+    "CVTERM ID": "float",
+    "Model Sequence ID": "float",
+    "Model ID": "float",
+    "Model Name": "string",
+    "ARO Name": "string",
+    "Protein Accession": "string",
+    "DNA Accession": "string",
+    "AMR Gene Family": "string",
+    "Drug Class": "string",
+    "Resistance Mechanism": "string",
+    "CARD Short Name": "string",
+}
+
 # Define a function to create plots for a given approach and top N
 def create_plots(merged_data, title_suffix):
     # Sort merged_data by 'query_id' and 'perc_identity_16s' in descending order
@@ -46,7 +62,7 @@ def create_plots(merged_data, title_suffix):
     return combined_chart
 
 def process_blast_data(input_file,output_file,sample_name):
-    filtered_df = pd.read_csv(input_file, sep=",", header=0)
+    filtered_df = pd.read_csv(input_file, sep=",", header=0,dtype=dtype_dict)
 
     # Filter ABR and 16S parts with respective conditions
     abr_data = filtered_df[filtered_df['part'] == 'ABR']

@@ -1,5 +1,43 @@
 import pandas as pd
 
+dtype_dict = {
+    "query_id": "string",
+    "subject_id": "string",
+    "perc_identity": "float",
+    "align_length": "int",
+    "mismatches": "int",
+    "gap_opens": "int",
+    "q_start": "int",
+    "q_end": "int",
+    "s_start": "int",
+    "s_end": "int",
+    "evalue": "float",
+    "bit_score": "float",
+    "part": "string",
+    "primaryAccession": "string",
+    "acc_start": "float",
+    "acc_stop": "float",
+    "distance": "int",
+    "orientation": "string",
+    "start": "float",
+    "stop": "float",
+    "path": "string",
+    "organism_name": "string",
+    "taxid": "float",
+    "ARO Accession": "string",
+    "CVTERM ID": "float",
+    "Model Sequence ID": "float",
+    "Model ID": "float",
+    "Model Name": "string",
+    "ARO Name": "string",
+    "Protein Accession": "string",
+    "DNA Accession": "string",
+    "AMR Gene Family": "string",
+    "Drug Class": "string",
+    "Resistance Mechanism": "string",
+    "CARD Short Name": "string"
+}
+
 def filter_group(group):
     most_common_q_start = group["most_common_q_start"].dropna().iloc[0]
     abr_part = group[group["part"] == "ABR"]
@@ -17,7 +55,7 @@ def process_orientation_and_counts(group):
     return pd.Series({"most_common_q_start": most_common_q_start, "most_common_q_end": most_common_q_end})
 
 def filter_blast_results(input_file, output_file):
-    df = pd.read_csv(input_file, compression='gzip', header=0, sep=',')
+    df = pd.read_csv(input_file, compression='gzip', header=0, sep=',',dtype=dtype_dict)
     
     # Filter results based on percentage identity and alignment length for ABR
     abr_data = df[

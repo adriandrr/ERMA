@@ -8,7 +8,6 @@ results/*
 .gitattributes
 .editorconfig
 LICENSE
-README.md
 .github/*
 .snakemake/*
 config/config.yaml
