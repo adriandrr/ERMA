@@ -55,5 +55,5 @@ if __name__ == "__main__":
     csv_files = snakemake.input.csv_files  # List of integrated_filtered_results.csv.gz files
     output_dir = snakemake.output[0]  # Directory where output will be saved
     min_similarity = snakemake.params.min_similarity  # Minimum similarity filter
-
+    sys.stderr = open(snakemake.log[0], "w")
     main(csv_files, min_similarity, output_dir)

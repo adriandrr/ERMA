@@ -11,3 +11,4 @@ dependencies:
   - seaborn
   - biopython
   - altair
+  - seqtk=1.3

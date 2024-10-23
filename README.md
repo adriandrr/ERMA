@@ -17,28 +17,27 @@ This pipeline is designed to process sequencing reads obtained from epicPCR expe
 The pipeline requires **Snakemake** with support for conda environments. You can install it using conda (via Miniconda or Anaconda):
 
 ```bash
-	conda install -c bioconda -c conda-forge snakemake
+conda install -c bioconda -c conda-forge snakemake
 ```
 
-Alternatively, follow the official [[!Snakemake installation](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html)] guide for more options.
+Alternatively, follow the official [Snakemake installation](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html) guide for more options.
 
 Install Dependencies
 This pipeline uses conda environments to manage its dependencies. Snakemake will automatically create and manage these environments when run with the 
---use-conda 
-flag.
+`--use-conda` flag.
 
 ## Usage Instructions
 
 Clone the repository: First, clone the pipeline repository to your local machine:
-bash
-Copy code
+```bash
 git clone https://github.com/your-username/epicPCR-pipeline.git
 cd epicPCR-pipeline
-Prepare Data Folder: You need to place your raw sequencing files (FASTQ format) in the data/fastq/ directory. This folder must exist before running the pipeline.
+```
+Prepare Data Folder: You need to place your raw sequencing files (fastq.gz format) in the data/fastq/ directory. This folder must exist before running the pipeline.
+
 Modify the Config File: Open the config/config.yaml file and change the base_dir parameter to the base directory where the pipeline is located. The config file should look like this:
 ```yaml
-Copy code
-base_dir: "/path/to/your/project"
+base_dir: "/path/to/your/ERMA"
 
 min_similarity: "0.8"
 
@@ -53,7 +52,6 @@ Replace /path/to/your/project with the actual path to your local pipeline direct
 Run the Pipeline: To start the pipeline, run the following command from the base directory:
 
 ```bash
-Copy code
 snakemake --use-conda --cores N
 ```
 Replace N with the number of cores (threads) you want to use.

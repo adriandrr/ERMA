@@ -1,4 +1,4 @@
-base_dir: "/Path/to/ERMA"  # User should change only this path
+base_dir: "/local/work/adrian/ERMA"  # User should change only this path
 
 min_similarity: "0.8"
 

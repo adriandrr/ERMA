@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import sys
 
 dtype_dict = {
     "taxid": "float",
@@ -43,4 +44,5 @@ def generate_percentage_idt_per_genus(input_file, output_file):
 if __name__ == "__main__":
     input_file = snakemake.input.filtered_data
     output_file = snakemake.output[0]
+    sys.stderr = open(snakemake.log[0], "w")
     generate_percentage_idt_per_genus(input_file, output_file)

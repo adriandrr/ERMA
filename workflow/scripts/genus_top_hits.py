@@ -2,9 +2,6 @@ import pandas as pd
 import altair as alt
 import sys
 import gzip
-import warnings
-from pandas.errors import SettingWithCopyWarning
-warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 dtype_dict = {
     "taxid": "float",
@@ -107,5 +104,6 @@ def process_blast_data(input_file,output_file,sample_name):
 if __name__ == "__main__":
     input_file = snakemake.input.filtered_data
     output_file = snakemake.output[0]
-    sample_name = snakemake.params.sample_name    
+    sample_name = snakemake.params.sample_name
+    sys.stderr = open(snakemake.log[0], "w")  
     process_blast_data(input_file,output_file,sample_name)

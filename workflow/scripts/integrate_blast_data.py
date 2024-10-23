@@ -1,6 +1,7 @@
 import pandas as pd
 import gzip
 import concurrent.futures
+import sys
 import os
 
 def process_orientation_and_counts(group):
@@ -62,11 +63,12 @@ def merge_results(card_output, silva_output, final_output):
 if __name__ == "__main__":
     card_results = snakemake.input.card_results
     silva_results = snakemake.input.silva_results
-    aro_mapping = snakemake.params.aro_mapping
-    taxa_mapping = snakemake.params.taxa_mapping
+    aro_mapping = snakemake.input.aro_mapping
+    taxa_mapping = snakemake.input.taxa_mapping
     card_output = snakemake.output.intermed_card_results
     silva_output = snakemake.output.intermed_silva_results
     final_output = snakemake.output.integrated_data
+    sys.stderr = open(snakemake.log[0], "w")
     chunksize = 20000  # Adjust based on memory availability
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
