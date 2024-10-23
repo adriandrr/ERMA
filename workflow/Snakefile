@@ -123,6 +123,8 @@ rule generate_genus_distribution_plot:
         )
     params:
         sample_name = "{sample}"
+    conda:
+        "envs/python.yaml"          
     script:
         "scripts/generate_genus_distribution_plot.py"
 
