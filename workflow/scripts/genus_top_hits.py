@@ -2,9 +2,6 @@ import pandas as pd
 import altair as alt
 import sys
 import gzip
-import warnings
-from pandas.errors import SettingWithCopyWarning
-warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 dtype_dict = {
     "taxid": "float",
