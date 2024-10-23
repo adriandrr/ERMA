@@ -1,4 +1,5 @@
 import pandas as pd
+import sys
 
 dtype_dict = {
     "query_id": "string",
@@ -91,4 +92,5 @@ def filter_blast_results(input_file, output_file):
 if __name__ == "__main__":
     input_file = snakemake.input.integrated_data
     output_file = snakemake.output.filtered_data
+    sys.stderr = open(snakemake.log[0], "w")
     filter_blast_results(input_file, output_file)

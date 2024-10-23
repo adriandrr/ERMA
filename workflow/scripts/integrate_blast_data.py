@@ -1,6 +1,7 @@
 import pandas as pd
 import gzip
 import concurrent.futures
+import sys
 import os
 
 def process_orientation_and_counts(group):
@@ -67,6 +68,7 @@ if __name__ == "__main__":
     card_output = snakemake.output.intermed_card_results
     silva_output = snakemake.output.intermed_silva_results
     final_output = snakemake.output.integrated_data
+    sys.stderr = open(snakemake.log[0], "w")
     chunksize = 20000  # Adjust based on memory availability
 
     with concurrent.futures.ThreadPoolExecutor() as executor:

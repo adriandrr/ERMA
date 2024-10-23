@@ -16,20 +16,24 @@ rule all:
 rule decompress_fastq:
     input:
         "{base_dir}/data/fastq/{sample}.fastq.gz"
+    log:
+        "{base_dir}/logs/decompress_fastq/{sample}.log"    
     output:
         temp("{base_dir}/data/fastq/{sample}.fastq")
     shell:
-        "gunzip {input}"
+        "gzip -dk {input} 2> {log}"
 
 rule convert_fastq_to_fasta:
     input:
         "{base_dir}/data/fastq/{sample}.fastq"
     output:
         temp("{base_dir}/data/fastq/{sample}.fasta")
+    log:
+        "{base_dir}/logs/convert_fastq_to_fasta/{sample}.log"    
     conda:
         "envs/python.yaml"        
     shell:
-        "seqtk seq -a {input} > {output}"
+        "seqtk seq -a {input} > {output} 2> {log}"
 
 rule blast_card:
     input:
@@ -39,11 +43,13 @@ rule blast_card:
         card_results = temp("{base_dir}/results/{sample}/card_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
+    log:
+        "{base_dir}/logs/blast_card/{sample}.log"    
     conda:
         "envs/blast.yaml"        
     shell:
         """
-        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 64
+        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 16 2> {log}
         """
 
 rule blast_silva:
@@ -54,11 +60,13 @@ rule blast_silva:
         silva_results = temp("{base_dir}/results/{sample}/SILVA_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
+    log:
+        "{base_dir}/logs/blast_silva/{sample}.log"    
     conda:
         "envs/blast.yaml"        
     shell:
         """
-        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 64
+        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 16 2> {log}
         """
 
 rule gzip_blast_results:
@@ -68,10 +76,12 @@ rule gzip_blast_results:
     output:
         silva_zip = "{base_dir}/results/{sample}/SILVA_results.txt.gz",
         card_zip = "{base_dir}/results/{sample}/card_results.txt.gz"
+    log:
+        "{base_dir}/logs/gzip_blast_results/{sample}.log"        
     shell:
         """
-        gzip {input.silva_results}
-        gzip {input.card_results}
+        gzip {input.silva_results} 2> {log}
+        gzip {input.card_results} 2>> {log}
         """
 
 rule integrate_blast_data:
@@ -85,7 +95,9 @@ rule integrate_blast_data:
     params:
         aro_mapping = "{base_dir}/data/card_db/aro_index.tsv",
         taxa_mapping = "{base_dir}/data/silva_db/silva_tax.txt"
-    conda:
+    log:
+        "{base_dir}/logs/integrate_blast_data/{sample}.log"    
+    conda:            
         "envs/python.yaml"
     threads: 60
     script:
@@ -94,10 +106,12 @@ rule integrate_blast_data:
 rule gzip_integrated_blast_data:
     input:
         int_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv"
+    log:
+        "{base_dir}/logs/gzip_integrated_blast_data/{sample}.log"    
     output:
         int_data_zip = "{base_dir}/results/{sample}/integrated_filtered_results.csv.gz"
     shell:
-        "gzip {input.int_data}"
+        "gzip -9 {input.int_data} 2> {log}"
 
 rule filter_blast_results:
     input:
@@ -106,8 +120,10 @@ rule filter_blast_results:
         filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
     params:
         min_similarity = config["min_similarity"]
+    log:
+        "{base_dir}/logs/filter_blast_results/{sample}.log"         
     conda:
-        "envs/python.yaml"        
+        "envs/python.yaml"   
     script:
         "scripts/filter_blast_results.py"
 
@@ -140,8 +156,10 @@ rule generate_genus_top_hits:
         )
     params:
         sample_name = "{sample}"
+    log:
+        "{base_dir}/logs/generate_genus_distribution_plot/{sample}.log"                  
     conda:
-        "envs/python.yaml"        
+        "envs/python.yaml"
     script:
         "scripts/genus_top_hits.py"
 
@@ -156,8 +174,10 @@ rule plot_evalue_boxplot:
         )
     params:
         min_similarity = config["min_similarity"]
+    log:
+        "{base_dir}/logs/plot_evalue_boxplot/combined.log"               
     conda:
-        "envs/python.yaml"        
+        "envs/python.yaml"     
     script:
         "scripts/evalue_boxplots.py"
 
@@ -172,8 +192,10 @@ rule plot_percentage_identity_boxplot:
         )
     params:
         min_similarity = config["min_similarity"]
+    log:
+        "{base_dir}/logs/plot_percentage_identity_boxplot/combined.log"    
     conda:
-        "envs/python.yaml"        
+        "envs/python.yaml"     
     script:
         "scripts/percidt_boxplots.py"
 
@@ -188,8 +210,10 @@ rule plot_alignment_length_boxplot:
         )        
     params:
         min_similarity = config["min_similarity"]
+    log:
+        "{base_dir}/logs/plot_alignment_length_boxplot/combined.log"               
     conda:
-        "envs/python.yaml"        
+        "envs/python.yaml"     
     script:
         "scripts/align_lengths_boxplots.py"
 
@@ -204,6 +228,8 @@ rule plot_read_positions:
         )  
     params:
         sample_name = "{sample}"
+    log:
+        "{base_dir}/logs/plot_read_positions/{sample}.log"            
     conda:
         "envs/python.yaml"
     script:
@@ -218,6 +244,8 @@ rule generate_percidt_genus:
             caption = "../report/genus_top_hits.rst",
             category="2. Genus percentage Identity",
         )
+    log:
+        "{base_dir}/logs/generate_percidt_genus/{sample}.log"            
     conda:
         "envs/python.yaml"
     script:
@@ -233,6 +261,6 @@ rule snakemake_report:
         expand("{base_dir}/results/boxplots/combined_allength_boxplot.png",base_dir=config["base_dir"]),
         expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png",base_dir=config["base_dir"])
     output:
-        "results/report.zip"
+        "results/report.zip"     
     shell:
-        "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css"
+        "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css 2> {log}"
