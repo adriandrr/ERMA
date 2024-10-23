@@ -87,14 +87,13 @@ rule gzip_blast_results:
 rule integrate_blast_data:
     input:
         card_results = "{base_dir}/results/{sample}/card_results.txt.gz",
-        silva_results = "{base_dir}/results/{sample}/SILVA_results.txt.gz"
+        silva_results = "{base_dir}/results/{sample}/SILVA_results.txt.gz",
+        aro_mapping = "{base_dir}/data/card_db/aro_index.tsv",
+        taxa_mapping = "{base_dir}/data/silva_db/silva_tax.txt"        
     output:
         intermed_card_results = temp("{base_dir}/results/{sample}/intermed_card_results.csv"),
         intermed_silva_results = temp("{base_dir}/results/{sample}/intermed_silva_results.csv"),
         integrated_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv"
-    params:
-        aro_mapping = "{base_dir}/data/card_db/aro_index.tsv",
-        taxa_mapping = "{base_dir}/data/silva_db/silva_tax.txt"
     log:
         "{base_dir}/logs/integrate_blast_data/{sample}.log"    
     conda:            

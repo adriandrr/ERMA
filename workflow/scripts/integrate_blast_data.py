@@ -63,8 +63,8 @@ def merge_results(card_output, silva_output, final_output):
 if __name__ == "__main__":
     card_results = snakemake.input.card_results
     silva_results = snakemake.input.silva_results
-    aro_mapping = snakemake.params.aro_mapping
-    taxa_mapping = snakemake.params.taxa_mapping
+    aro_mapping = snakemake.input.aro_mapping
+    taxa_mapping = snakemake.input.taxa_mapping
     card_output = snakemake.output.intermed_card_results
     silva_output = snakemake.output.intermed_silva_results
     final_output = snakemake.output.integrated_data
