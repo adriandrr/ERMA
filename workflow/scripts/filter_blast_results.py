@@ -1,4 +1,4 @@
-import dask.dataframe as pd
+import pandas as pd
 import sys
 
 dtype_dict = {
@@ -87,7 +87,7 @@ def filter_blast_results(input_file, output_file):
     merged_data = pd.concat([abr_data_filtered, sixteen_s_data_filtered])
     
     # Write the filtered data to output
-    merged_data.compute().to_csv(output_file, index=False)
+    merged_data.to_csv(output_file, index=False)
 
 if __name__ == "__main__":
     input_file = snakemake.input.integrated_data
