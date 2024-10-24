@@ -1,4 +1,4 @@
-import pandas as pd
+import dask.dataframe as pd
 import altair as alt
 import sys
 import gzip
