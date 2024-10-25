@@ -62,4 +62,5 @@ def merge_htmls(path):
 
 if __name__ == "__main__":
     path = snakemake.input.path
+    sys.stderr = open(snakemake.log[0], "w")
     merge_htmls(path)

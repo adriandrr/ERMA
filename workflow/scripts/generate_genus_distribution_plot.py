@@ -1,5 +1,6 @@
 import pandas as pd
 import altair as alt
+import sys
 
 dtype_dict = {
     "taxid": "float",
@@ -45,5 +46,6 @@ def generate_genus_distribution_plot(input_file, output_file, sample_name):
 if __name__ == "__main__":
     input_file = snakemake.input.filtered_data
     output_file = snakemake.output[0]
-    sample_name = snakemake.params.sample_name    
+    sample_name = snakemake.params.sample_name
+    sys.stderr = open(snakemake.log[0], "w")
     generate_genus_distribution_plot(input_file, output_file, sample_name)
