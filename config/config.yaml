@@ -1,4 +1,4 @@
-base_dir: "/local/work/adrian/ERMA_test/ERMA"  # User should change only this path
+base_dir: "/local/work/adrian/ERMA"  # User should change only this path
 
 min_similarity: "0.8"
 
@@ -8,3 +8,5 @@ silva:
 
 card:
   download-path: "https://card.mcmaster.ca/download/0/broadstreet-v3.3.0.tar.bz2"
+
+chunksize: 10000 # Defines the number of chunks the large tables are split into to not overflow RAM

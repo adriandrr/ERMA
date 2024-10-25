@@ -49,7 +49,7 @@ rule blast_card:
         "envs/blast.yaml"        
     shell:
         """
-        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 16 2> {log}
+        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 64 2> {log}
         """
 
 rule blast_silva:
@@ -61,12 +61,12 @@ rule blast_silva:
     params:
         db = "{base_dir}/data/blast_db"
     log:
-        "{base_dir}/logs/blast_silva/{sample}.log"    
+        "{base_dir}/logs/blast_silva/{sample}.log" 
     conda:
         "envs/blast.yaml"        
     shell:
         """
-        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 16 2> {log}
+        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 64 2> {log}
         """
 
 rule gzip_blast_results:
@@ -94,11 +94,12 @@ rule integrate_blast_data:
         intermed_card_results = temp("{base_dir}/results/{sample}/intermed_card_results.csv"),
         intermed_silva_results = temp("{base_dir}/results/{sample}/intermed_silva_results.csv"),
         integrated_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv"
+    params:
+        chunksize = config["chunksize"]
     log:
         "{base_dir}/logs/integrate_blast_data/{sample}.log"    
     conda:            
         "envs/python.yaml"
-    threads: 60
     script:
         "scripts/integrate_blast_data.py"
 
@@ -156,7 +157,8 @@ rule generate_genus_top_hits:
             category="1. Genus distribution/{sample}"
         )
     params:
-        sample_name = "{sample}"
+        sample_name = "{sample}",
+        chunksize = config["chunksize"]    
     log:
         "{base_dir}/logs/generate_genus_top_hits/{sample}.log"                  
     conda:
@@ -228,7 +230,8 @@ rule plot_read_positions:
             category="3. General data",        
         )  
     params:
-        sample_name = "{sample}"
+        sample_name = "{sample}",
+        chunksize = config["chunksize"]
     log:
         "{base_dir}/logs/plot_read_positions/{sample}.log"            
     conda:

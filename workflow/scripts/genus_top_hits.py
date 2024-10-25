@@ -59,15 +59,17 @@ def create_plots(merged_data, title_suffix):
     
     return combined_chart
 
-def process_blast_data(input_file,output_file,sample_name):
-    filtered_df = pd.read_csv(input_file, sep=",", header=0,dtype=dtype_dict)
+def process_blast_data(input_file, output_file, sample_name,chunksize):
+    chunk_size = chunksize  # Adjust the chunk size according to your system's memory
 
-    # Filter ABR and 16S parts with respective conditions
-    abr_data = filtered_df[filtered_df['part'] == 'ABR']
-    sixteen_s_data = filtered_df[filtered_df['part'] == '16S']
+    merged_data_list = [] 
+    for chunk in pd.read_csv(input_file, sep=",", header=0, dtype=dtype_dict, chunksize=chunk_size):
+        abr_data = chunk[chunk['part'] == 'ABR']
+        sixteen_s_data = chunk[chunk['part'] == '16S']
+        merged_chunk = pd.merge(abr_data, sixteen_s_data, on='query_id', suffixes=('_abr', '_16s'))
+        merged_data_list.append(merged_chunk)
     
-    # Merge ABR and 16S data on 'query_id'
-    merged_data_path_16s = pd.merge(abr_data, sixteen_s_data, on='query_id', suffixes=('_abr', '_16s'))
+    merged_data_path_16s = pd.concat(merged_data_list)
     
     # Extract genus from the path
     merged_data_path_16s['genus'] = merged_data_path_16s['path_16s'].apply(lambda x: x.split(';')[-2] if pd.notna(x) else None)
@@ -106,5 +108,6 @@ if __name__ == "__main__":
     input_file = snakemake.input.filtered_data
     output_file = snakemake.output[0]
     sample_name = snakemake.params.sample_name
+    chunksize = snakemake.params.chunksize    
     sys.stderr = open(snakemake.log[0], "w")  
-    process_blast_data(input_file,output_file,sample_name)
+    process_blast_data(input_file,output_file,sample_name,chunksize)

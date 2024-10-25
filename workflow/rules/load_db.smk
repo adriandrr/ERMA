@@ -88,6 +88,8 @@ rule makeblastdb_silva:
         path = "{base_dir}/data/blast_db/silva_db"
     log:
         "{base_dir}/logs/makeblastdb_silva/log.log"
+    conda:
+        "../envs/blast.yaml"          
     shell:
         """
         makeblastdb -in {input.seq} -dbtype nucl -out {params.path} 2> {log};

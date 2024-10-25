@@ -1,6 +1,6 @@
-import dask.dataframe as dd
 import pandas as pd
 import gzip
+import concurrent.futures
 import sys
 import os
 
@@ -68,8 +68,8 @@ if __name__ == "__main__":
     card_output = snakemake.output.intermed_card_results
     silva_output = snakemake.output.intermed_silva_results
     final_output = snakemake.output.integrated_data
+    chunksize = snakemake.params.chunksize
     sys.stderr = open(snakemake.log[0], "w")
-    chunksize = 20000  # Adjust based on memory availability
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_card = executor.submit(process_card_results, card_results, aro_mapping, card_output, chunksize)
@@ -78,7 +78,6 @@ if __name__ == "__main__":
         future_card.result()
         future_silva.result()
 
-    # Merge results using pandas
     merge_results(card_output, silva_output, final_output)
     
     print(f"Processing complete. Final merged output saved to {final_output}")
