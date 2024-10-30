@@ -42,7 +42,7 @@ def process_silva_results(silva_results_path, taxa_mapping_path, output_path, ch
     with gzip.open(silva_results_path, 'rt') as f_in, open(output_path, 'w') as f_out:
         for chunk in pd.read_csv(f_in, sep="\t", names=blast_columns, chunksize=chunksize):
             chunk["part"] = "16S"
-            chunk[["primaryAccession","acc_start","acc_stop"]] = chunk['subject_id'].str.split(".", expand=True)
+            chunk["primaryAccession"] = chunk['subject_id'].str.split(".", expand=True)[0]
             chunk["distance"] = chunk["q_start"] - chunk["q_end"]
             orientation_counts = chunk.groupby("query_id").apply(process_orientation_and_counts).reset_index()
             merged_chunk = chunk.merge(orientation_counts, on="query_id")

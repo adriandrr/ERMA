@@ -11,7 +11,7 @@ print(f"Detected samples: {samples}")
 
 rule all:
     input:
-        "results/report.zip"
+        expand("{base_dir}/results/{sample}/{part}_filtered_results.csv",sample=samples,base_dir=config["base_dir"],part=range(get_num_parts))
 
 rule decompress_fastq:
     input:
@@ -27,7 +27,7 @@ rule convert_fastq_to_fasta:
     input:
         "{base_dir}/data/fastq/{sample}.fastq"
     output:
-        temp("{base_dir}/data/fastq/{sample}.fasta")
+        "{base_dir}/data/fastq/{sample}.fasta"
     log:
         "{base_dir}/logs/convert_fastq_to_fasta/{sample}.log"    
     conda:
@@ -35,12 +35,26 @@ rule convert_fastq_to_fasta:
     shell:
         "seqtk seq -a {input} > {output} 2> {log}"
 
+rule split_fasta_file:
+    input:
+        "{base_dir}/data/fastq/{sample}.fasta"
+    output:
+        "{base_dir}/data/fastq/{sample}.part_001.fasta"
+    params:
+        maxlines = config["maxlines"],
+    run:
+        num_parts = count_fasta_lines(input[0],params.maxlines)
+        shell("seqkit split2 --by-part {num_parts} {input[0]} --out-dir {wildcards.base_dir}/data/fastq/")
+        with open(f"{wildcards.base_dir}/data/fastq/{wildcards.sample}_num_parts.txt", "w") as f:
+            f.write(f"{num_parts:03}")
+
+
 rule blast_card:
     input:
-        fasta = "{base_dir}/data/fastq/{sample}.fasta",
+        fasta = "{base_dir}/data/fastq/{sample}.part_{part}.fasta",
         card = "{base_dir}/data/blast_db/card_db.pdb"
     output:
-        card_results = temp("{base_dir}/results/{sample}/card_results.txt")
+        card_results = temp("{base_dir}/results/{sample}/part_{part}.card_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
     log:
@@ -54,10 +68,10 @@ rule blast_card:
 
 rule blast_silva:
     input:
-        fasta = "{base_dir}/data/fastq/{sample}.fasta",
+        fasta = "{base_dir}/data/fastq/{sample}.part_{part}.fasta",
         silva = "{base_dir}/data/blast_db/silva_db.ndb"
     output:
-        silva_results = temp("{base_dir}/results/{sample}/SILVA_results.txt")
+        silva_results = temp("{base_dir}/results/{sample}/part_{part}.SILVA_results.txt")
     params:
         db = "{base_dir}/data/blast_db"
     log:
@@ -71,11 +85,11 @@ rule blast_silva:
 
 rule gzip_blast_results:
     input:
-        silva_results = "{base_dir}/results/{sample}/SILVA_results.txt",
-        card_results = "{base_dir}/results/{sample}/card_results.txt"
+        silva_results = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt",
+        card_results = "{base_dir}/results/{sample}/part_{part}.card_results.txt"
     output:
-        silva_zip = "{base_dir}/results/{sample}/SILVA_results.txt.gz",
-        card_zip = "{base_dir}/results/{sample}/card_results.txt.gz"
+        silva_zip = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt.gz",
+        card_zip = "{base_dir}/results/{sample}/part_{part}.card_results.txt.gz"
     log:
         "{base_dir}/logs/gzip_blast_results/{sample}.log"        
     shell:
@@ -86,14 +100,14 @@ rule gzip_blast_results:
 
 rule integrate_blast_data:
     input:
-        card_results = "{base_dir}/results/{sample}/card_results.txt.gz",
-        silva_results = "{base_dir}/results/{sample}/SILVA_results.txt.gz",
+        card_results = "{base_dir}/results/{sample}/part_{part}.card_results.txt.gz",
+        silva_results = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt.gz",
         aro_mapping = "{base_dir}/data/card_db/aro_index.tsv",
         taxa_mapping = "{base_dir}/data/silva_db/silva_tax.txt"        
     output:
-        intermed_card_results = temp("{base_dir}/results/{sample}/intermed_card_results.csv"),
-        intermed_silva_results = temp("{base_dir}/results/{sample}/intermed_silva_results.csv"),
-        integrated_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv"
+        intermed_card_results = temp("{base_dir}/results/{sample}/part_{part}.intermed_card_results.csv"),
+        intermed_silva_results = temp("{base_dir}/results/{sample}/part_{part}.intermed_silva_results.csv"),
+        integrated_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv"
     params:
         chunksize = config["chunksize"]
     log:
@@ -105,19 +119,19 @@ rule integrate_blast_data:
 
 rule gzip_integrated_blast_data:
     input:
-        int_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv"
+        int_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv"
     log:
         "{base_dir}/logs/gzip_integrated_blast_data/{sample}.log"    
     output:
-        int_data_zip = "{base_dir}/results/{sample}/integrated_filtered_results.csv.gz"
+        int_data_zip = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv.gz"
     shell:
         "gzip -9 {input.int_data} 2> {log}"
 
 rule filter_blast_results:
     input:
-        integrated_data = "{base_dir}/results/{sample}/integrated_filtered_results.csv.gz"
+        integrated_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv.gz"
     output:
-        filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
+        filtered_data = "{base_dir}/results/{sample}/part_{part}.filtered_results.csv"
     params:
         min_similarity = config["min_similarity"]
     log:
@@ -255,7 +269,7 @@ rule generate_percidt_genus:
     script:
         "scripts/percidt_per_genus.py"
 
-rule snakemake_report:
+"""rule snakemake_report:
     input:
         expand("{base_dir}/results/{sample}/genus_top_hits.html", sample=samples,base_dir=config["base_dir"]),
         expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),
@@ -268,3 +282,4 @@ rule snakemake_report:
         "results/report.zip"     
     shell:
         "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css"
+"""
