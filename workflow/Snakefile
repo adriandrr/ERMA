@@ -6,12 +6,11 @@ include: "rules/common.smk"
 include: "rules/load_db.smk"
 
 samples = [os.path.basename(f).replace(".fastq.gz", "") for f in glob.glob(os.path.join(config["base_dir"], "data", "fastq", "*.fastq.gz"))]
-
 print(f"Detected samples: {samples}")
 
 rule all:
     input:
-        expand("{base_dir}/results/{sample}/{part}_filtered_results.csv",sample=samples,base_dir=config["base_dir"],part=range(get_num_parts))
+        "results/report.zip"  
 
 rule decompress_fastq:
     input:
@@ -37,33 +36,34 @@ rule convert_fastq_to_fasta:
 
 rule split_fasta_file:
     input:
-        "{base_dir}/data/fastq/{sample}.fasta"
+        expand("{base_dir}/data/fastq/{sample}.fasta",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
-        "{base_dir}/data/fastq/{sample}.part_001.fasta"
+        expand("{base_dir}/data/fastq/{sample}.part_{part}.fasta",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     params:
-        maxlines = config["maxlines"],
+        outdir = config["base_dir"],
+        num_parts = config["num_parts"],
     run:
-        num_parts = count_fasta_lines(input[0],params.maxlines)
-        shell("seqkit split2 --by-part {num_parts} {input[0]} --out-dir {wildcards.base_dir}/data/fastq/")
-        with open(f"{wildcards.base_dir}/data/fastq/{wildcards.sample}_num_parts.txt", "w") as f:
-            f.write(f"{num_parts:03}")
-
+      for sample in samples:
+            fasta_file = f"{params.outdir}/data/fastq/{sample}.fasta"
+            shell("seqkit split2 --by-part {params.num_parts} {fasta_file} --out-dir {params.outdir}/data/fastq/")
 
 rule blast_card:
     input:
         fasta = "{base_dir}/data/fastq/{sample}.part_{part}.fasta",
         card = "{base_dir}/data/blast_db/card_db.pdb"
     output:
-        card_results = temp("{base_dir}/results/{sample}/part_{part}.card_results.txt")
+        card_results = "{base_dir}/results/{sample}/{part}/card_results.txt"
     params:
-        db = "{base_dir}/data/blast_db"
+        db = "{base_dir}/data/blast_db",
+        internal_threads = config["num_parts"],        
     log:
-        "{base_dir}/logs/blast_card/{sample}.log"    
+        "{base_dir}/logs/blast_card/{sample}_{part}.log"    
     conda:
-        "envs/blast.yaml"        
+        "envs/blast.yaml" 
+    threads: config["max_threads"]      
     shell:
         """
-        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads 64 2> {log}
+        blastx -query {input.fasta} -db {params.db}/card_db -out {output.card_results} -outfmt 6 -evalue 1e-5 -num_threads {params.internal_threads} 2> {log}
         """
 
 rule blast_silva:
@@ -71,27 +71,29 @@ rule blast_silva:
         fasta = "{base_dir}/data/fastq/{sample}.part_{part}.fasta",
         silva = "{base_dir}/data/blast_db/silva_db.ndb"
     output:
-        silva_results = temp("{base_dir}/results/{sample}/part_{part}.SILVA_results.txt")
+        silva_results = "{base_dir}/results/{sample}/{part}/SILVA_results.txt"
     params:
-        db = "{base_dir}/data/blast_db"
+        db = "{base_dir}/data/blast_db",
+        internal_threads = config["num_parts"],
     log:
-        "{base_dir}/logs/blast_silva/{sample}.log" 
+        "{base_dir}/logs/blast_silva/{sample}_{part}.log" 
     conda:
-        "envs/blast.yaml"        
+        "envs/blast.yaml"
+    threads: config["max_threads"]                  
     shell:
         """
-        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads 64 2> {log}
+        blastn -query {input.fasta} -db {params.db}/silva_db -out {output.silva_results} -outfmt 6 -evalue 1e-5 -num_threads {params.internal_threads} 2> {log}
         """
 
 rule gzip_blast_results:
     input:
-        silva_results = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt",
-        card_results = "{base_dir}/results/{sample}/part_{part}.card_results.txt"
+        silva_results = "{base_dir}/results/{sample}/{part}/SILVA_results.txt",
+        card_results = "{base_dir}/results/{sample}/{part}/card_results.txt"
     output:
-        silva_zip = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt.gz",
-        card_zip = "{base_dir}/results/{sample}/part_{part}.card_results.txt.gz"
+        silva_zip = "{base_dir}/results/{sample}/{part}/SILVA_results.txt.gz",
+        card_zip = "{base_dir}/results/{sample}/{part}/card_results.txt.gz"
     log:
-        "{base_dir}/logs/gzip_blast_results/{sample}.log"        
+        "{base_dir}/logs/gzip_blast_results/{sample}_{part}.log"        
     shell:
         """
         gzip {input.silva_results} 2> {log}
@@ -100,69 +102,75 @@ rule gzip_blast_results:
 
 rule integrate_blast_data:
     input:
-        card_results = "{base_dir}/results/{sample}/part_{part}.card_results.txt.gz",
-        silva_results = "{base_dir}/results/{sample}/part_{part}.SILVA_results.txt.gz",
+        card_results = "{base_dir}/results/{sample}/{part}/card_results.txt.gz",
+        silva_results = "{base_dir}/results/{sample}/{part}/SILVA_results.txt.gz",
         aro_mapping = "{base_dir}/data/card_db/aro_index.tsv",
         taxa_mapping = "{base_dir}/data/silva_db/silva_tax.txt"        
     output:
-        intermed_card_results = temp("{base_dir}/results/{sample}/part_{part}.intermed_card_results.csv"),
-        intermed_silva_results = temp("{base_dir}/results/{sample}/part_{part}.intermed_silva_results.csv"),
-        integrated_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv"
+        intermed_card_results = temp("{base_dir}/results/{sample}/{part}/intermed_card_results.csv"),
+        intermed_silva_results = temp("{base_dir}/results/{sample}/{part}/intermed_silva_results.csv"),
+        integrated_data = temp("{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv")
     params:
         chunksize = config["chunksize"]
     log:
-        "{base_dir}/logs/integrate_blast_data/{sample}.log"    
+        "{base_dir}/logs/integrate_blast_data/{sample}_{part}.log"    
     conda:            
         "envs/python.yaml"
+    threads: config["max_threads"]
     script:
         "scripts/integrate_blast_data.py"
 
-rule gzip_integrated_blast_data:
-    input:
-        int_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv"
-    log:
-        "{base_dir}/logs/gzip_integrated_blast_data/{sample}.log"    
-    output:
-        int_data_zip = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv.gz"
-    shell:
-        "gzip -9 {input.int_data} 2> {log}"
-
 rule filter_blast_results:
     input:
-        integrated_data = "{base_dir}/results/{sample}/part_{part}.integrated_filtered_results.csv.gz"
+        integrated_data = "{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv"
     output:
-        filtered_data = "{base_dir}/results/{sample}/part_{part}.filtered_results.csv"
+        filtered_data = "{base_dir}/results/{sample}/{part}/filtered_results.csv"
     params:
         min_similarity = config["min_similarity"]
     log:
-        "{base_dir}/logs/filter_blast_results/{sample}.log"         
+        "{base_dir}/logs/filter_blast_results/{sample}_{part}.log"         
     conda:
         "envs/python.yaml"   
+    threads: config["max_threads"]
     script:
         "scripts/filter_blast_results.py"
 
+rule gzip_filtered_blast_data:
+    input:
+        int_data = "{base_dir}/results/{sample}/{part}/filtered_results.csv"
+    log:
+        "{base_dir}/logs/gzip_integrated_blast_data/{sample}_{part}.log"    
+    output:
+        int_data_zip = "{base_dir}/results/{sample}/{part}/filtered_results.csv.gz"
+    shell:
+        "gzip -9 {input.int_data} 2> {log}"
+
 rule generate_genus_distribution_plot:
     input:
-        filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
+        filtered_data = expand("{{base_dir}}/results/{{sample}}/{part}/filtered_results.csv", 
+                                part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/{sample}/genus_distribution_plot.html",
             caption = "../report/genus_top_hits.rst",
             htmlindex="genus_distribution_plot.html",
             category="1. Genus distribution/{sample}"
-        )
+        ),
+        "{base_dir}/results/{sample}/combined_df.csv",
     params:
         sample_name = "{sample}"
     log:
         "{base_dir}/logs/generate_genus_distribution_plot/{sample}.log"         
     conda:
-        "envs/python.yaml"          
+        "envs/python.yaml"    
+    threads: config["max_threads"]              
     script:
         "scripts/generate_genus_distribution_plot.py"
 
 rule generate_genus_top_hits:
     input:
-        filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
+        filtered_data = expand("{{base_dir}}/results/{{sample}}/{part}/filtered_results.csv", 
+                                part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/{sample}/genus_top_hits.html",
@@ -172,17 +180,17 @@ rule generate_genus_top_hits:
         )
     params:
         sample_name = "{sample}",
-        chunksize = config["chunksize"]    
     log:
         "{base_dir}/logs/generate_genus_top_hits/{sample}.log"                  
     conda:
         "envs/python.yaml"
+    threads: config["max_threads"]
     script:
         "scripts/genus_top_hits.py"
 
 rule plot_evalue_boxplot:
     input:
-        csv_files = expand("{base_dir}/results/{sample}/filtered_results.csv", sample=samples,base_dir=config["base_dir"])
+        csv_files = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/boxplots/combined_evalue_boxplot.png",
@@ -190,7 +198,7 @@ rule plot_evalue_boxplot:
             category="3. General data"
         )
     params:
-        min_similarity = config["min_similarity"]
+        sample_name = samples,
     log:
         "{base_dir}/logs/plot_evalue_boxplot/combined.log"               
     conda:
@@ -200,7 +208,7 @@ rule plot_evalue_boxplot:
 
 rule plot_percentage_identity_boxplot:
     input:
-        csv_files = expand("{base_dir}/results/{sample}/filtered_results.csv", sample=samples,base_dir=config["base_dir"])
+        csv_files = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/boxplots/combined_percidt_boxplot.png",
@@ -208,7 +216,7 @@ rule plot_percentage_identity_boxplot:
             category="3. General data",        
         )
     params:
-        min_similarity = config["min_similarity"]
+        sample_name = samples,
     log:
         "{base_dir}/logs/plot_percentage_identity_boxplot/combined.log"    
     conda:
@@ -218,7 +226,7 @@ rule plot_percentage_identity_boxplot:
 
 rule plot_alignment_length_boxplot:
     input:
-        csv_files = expand("{base_dir}/results/{sample}/filtered_results.csv", sample=samples,base_dir=config["base_dir"])
+        csv_files = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/boxplots/combined_allength_boxplot.png",
@@ -226,7 +234,7 @@ rule plot_alignment_length_boxplot:
             category="3. General data",        
         )        
     params:
-        min_similarity = config["min_similarity"]
+        sample_name = samples,
     log:
         "{base_dir}/logs/plot_alignment_length_boxplot/combined.log"               
     conda:
@@ -255,7 +263,8 @@ rule plot_read_positions:
 
 rule generate_percidt_genus:
     input:
-        filtered_data = "{base_dir}/results/{sample}/filtered_results.csv"
+        filtered_data = expand("{{base_dir}}/results/{{sample}}/{part}/filtered_results.csv", 
+                                part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/{sample}/genus_idt_per_genus_plot.png",
@@ -269,17 +278,15 @@ rule generate_percidt_genus:
     script:
         "scripts/percidt_per_genus.py"
 
-"""rule snakemake_report:
-    input:
-        expand("{base_dir}/results/{sample}/genus_top_hits.html", sample=samples,base_dir=config["base_dir"]),
-        expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),
-        expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),
-        expand("{base_dir}/results/{sample}/read_positions.png", sample=samples,base_dir=config["base_dir"]),
-        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png",base_dir=config["base_dir"]),
-        expand("{base_dir}/results/boxplots/combined_allength_boxplot.png",base_dir=config["base_dir"]),
-        expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png",base_dir=config["base_dir"])
+rule snakemake_report:
+    input:       
+        expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/{sample}/genus_top_hits.html", sample=samples,base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png", base_dir=config["base_dir"], sample=samples),        
+        expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png", base_dir=config["base_dir"], sample=samples),        
+        expand("{base_dir}/results/boxplots/combined_allength_boxplot.png", base_dir=config["base_dir"], sample=samples),        
     output:
         "results/report.zip"     
     shell:
         "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css"
-"""

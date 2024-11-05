@@ -19,11 +19,9 @@ def get_card_db_dir():
 def get_silva_db_dir():
     return os.path.join(get_base_dir(), "data", "silva_db")
 
-def count_fasta_lines(fasta_file,maxlines):
-    lines = sum(1 for _ in SeqIO.parse(fasta_file, "fasta"))
-    num_parts = lines // maxlines +1 
-    return(num_parts)
+def get_numpart_list():
+    return(list([f"00{i}" if i < 10 else f"0{i}" for i in range(1,config["num_parts"]+1)]))
 
 def get_num_parts(wildcards):
     with open(f"{wildcards.base_dir}/data/fastq/{wildcards.sample}_num_parts.txt") as f:
-        return (f.read().strip())
+        return int(f.read().strip())
