@@ -9,4 +9,6 @@ silva:
 card:
   download-path: "https://card.mcmaster.ca/download/0/broadstreet-v3.3.0.tar.bz2"
 
-chunksize: 10000 # Defines the number of chunks the large tables are split into to not overflow RAM
+chunksize: 500000 # Defines the number of chunks the large tables are split into to not overflow RAM
+num_parts: 10
+max_threads: 64

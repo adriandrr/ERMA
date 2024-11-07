@@ -51,32 +51,41 @@ def filter_group(group):
     return pd.concat([abr_part, filtered_16s_part])
 
 def process_orientation_and_counts(group):
+    # Get the most common start and end positions
     most_common_q_start = group["q_start"].mode().iloc[0]
     most_common_q_end = group["q_end"].mode().iloc[0]
-    return pd.Series({"most_common_q_start": most_common_q_start, "most_common_q_end": most_common_q_end})
+    
+    # Filter for the maximum perc_identity rows within this group
+    max_perc_identity = group["perc_identity"].max()
+    filtered_group = group[group["perc_identity"] == max_perc_identity]
 
-def filter_blast_results(input_file, output_file):
-    df = pd.read_csv(input_file, compression='gzip', header=0, sep=',',dtype=dtype_dict)
+    # Add the start/end positions as columns for each row in the filtered group
+    filtered_group = filtered_group.assign(
+        most_common_q_start=most_common_q_start,
+        most_common_q_end=most_common_q_end
+    )
+    return filtered_group
+
+def filter_blast_results(input_file, output_file, min_similarity):
+    df = pd.read_csv(input_file, header=0, sep=',',dtype=dtype_dict)
     
     # Filter results based on percentage identity and alignment length for ABR
     abr_data = df[
         (df['part'] == 'ABR') &
-        (df["perc_identity"] > 93.0) &
+        (df['perc_identity'] > float(min_similarity)) &
         (df['orientation'] == 'forward')
     ]
-    orientation_counts = abr_data.groupby("query_id").apply(process_orientation_and_counts).reset_index()
-    abr_data = abr_data.merge(orientation_counts, on="query_id")  # Assign the merged data back to abr_data
+    abr_data = abr_data.groupby("query_id").apply(process_orientation_and_counts).reset_index(drop=True)
 
     # Filter results based on percentage identity and alignment length for 16S
     sixteen_s_data = df[
         (df['part'] == '16S') &
         (df['align_length'].between(200, 300)) &
-        (df["perc_identity"] > 87.0) &
+        (df['perc_identity'] > float(min_similarity) * 100) &
         (df['orientation'] == 'reverse')
     ]
     
-    orientation_counts = sixteen_s_data.groupby("query_id").apply(process_orientation_and_counts).reset_index()
-    sixteen_s_data = sixteen_s_data.merge(orientation_counts, on="query_id")  # Assign the merged data back to sixteen_s_data
+    sixteen_s_data = sixteen_s_data.groupby("query_id").apply(process_orientation_and_counts).reset_index(drop=True)
     
     # Filter for common query IDs between abr_data and sixteen_s_data
     common_query_ids = pd.Index(abr_data['query_id']).intersection(sixteen_s_data['query_id'])
@@ -92,5 +101,6 @@ def filter_blast_results(input_file, output_file):
 if __name__ == "__main__":
     input_file = snakemake.input.integrated_data
     output_file = snakemake.output.filtered_data
+    min_similarity = snakemake.params.min_similarity
     sys.stderr = open(snakemake.log[0], "w")
-    filter_blast_results(input_file, output_file)
+    filter_blast_results(input_file, output_file,min_similarity)
