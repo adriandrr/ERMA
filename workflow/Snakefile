@@ -167,26 +167,49 @@ rule generate_genus_distribution_plot:
     script:
         "scripts/generate_genus_distribution_plot.py"
 
-rule generate_genus_top_hits:
+rule genera_abundance_table:
     input:
-        filtered_data = expand("{{base_dir}}/results/{{sample}}/{part}/filtered_results.csv", 
-                                part=get_numpart_list())
+        filtered_data = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
-            "{base_dir}/results/{sample}/genus_top_hits.html",
+            "{base_dir}/results/boxplots/combined_genus_abundance.csv",
             caption = "../report/genus_top_hits.rst",
-            htmlindex="genus_top_hits.html",
-            category="1. Genus distribution/{sample}"
+            category="3. General data"
         )
     params:
-        sample_name = "{sample}",
+        sample_name = samples,
     log:
-        "{base_dir}/logs/generate_genus_top_hits/{sample}.log"                  
+        "{base_dir}/logs/genera_abundance_table.log"                  
     conda:
         "envs/python.yaml"
     threads: config["max_threads"]
     script:
-        "scripts/genus_top_hits.py"
+        "scripts/genera_abundance_table.py"
+
+rule abundance_bubble_plot:
+    input:
+        abundance_data = "{base_dir}/results/boxplots/combined_genus_abundance.csv",
+    output:
+        report(
+            "{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html",
+            caption = "../report/genus_top_hits.rst",
+            category="0. Main result"
+        ),
+        report(
+            "{base_dir}/results/abundance/reads_per_found_AMR.csv",
+            caption = "../report/genus_top_hits.rst",
+            category="0. Main result"
+        ),
+    params:
+        abundance_filter = 0.0001
+    log:
+        "{base_dir}/logs/genera_abundance_plot.log"                  
+    conda:
+        "envs/python.yaml"
+    threads: config["max_threads"]
+    script:
+        "scripts/genera_abundance_plot.py"
+
 
 rule plot_evalue_boxplot:
     input:
@@ -281,11 +304,11 @@ rule generate_percidt_genus:
 rule snakemake_report:
     input:       
         expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),        
-        expand("{base_dir}/results/{sample}/genus_top_hits.html", sample=samples,base_dir=config["base_dir"]),        
         expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),        
-        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png", base_dir=config["base_dir"], sample=samples),        
-        expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png", base_dir=config["base_dir"], sample=samples),        
-        expand("{base_dir}/results/boxplots/combined_allength_boxplot.png", base_dir=config["base_dir"], sample=samples),        
+        expand("{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/boxplots/combined_allength_boxplot.png", base_dir=config["base_dir"]),        
     output:
         "results/report.zip"     
     shell:

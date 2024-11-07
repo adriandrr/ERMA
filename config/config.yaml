@@ -11,4 +11,4 @@ card:
 
 chunksize: 500000 # Defines the number of chunks the large tables are split into to not overflow RAM
 num_parts: 10
-max_threads: 32
+max_threads: 64

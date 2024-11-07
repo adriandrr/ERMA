@@ -66,12 +66,13 @@ def process_orientation_and_counts(group):
     )
     return filtered_group
 
-def filter_blast_results(input_file, output_file):
+def filter_blast_results(input_file, output_file, min_similarity):
     df = pd.read_csv(input_file, header=0, sep=',',dtype=dtype_dict)
     
     # Filter results based on percentage identity and alignment length for ABR
     abr_data = df[
         (df['part'] == 'ABR') &
+        (df['perc_identity'] > float(min_similarity)) &
         (df['orientation'] == 'forward')
     ]
     abr_data = abr_data.groupby("query_id").apply(process_orientation_and_counts).reset_index(drop=True)
@@ -80,6 +81,7 @@ def filter_blast_results(input_file, output_file):
     sixteen_s_data = df[
         (df['part'] == '16S') &
         (df['align_length'].between(200, 300)) &
+        (df['perc_identity'] > float(min_similarity) * 100) &
         (df['orientation'] == 'reverse')
     ]
     
@@ -99,5 +101,6 @@ def filter_blast_results(input_file, output_file):
 if __name__ == "__main__":
     input_file = snakemake.input.integrated_data
     output_file = snakemake.output.filtered_data
+    min_similarity = snakemake.params.min_similarity
     sys.stderr = open(snakemake.log[0], "w")
-    filter_blast_results(input_file, output_file)
+    filter_blast_results(input_file, output_file,min_similarity)
