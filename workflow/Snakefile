@@ -3,14 +3,16 @@ import os
 configfile: "config/config.yaml"
 
 include: "rules/common.smk"
+include: "rules/qc.smk"
 include: "rules/load_db.smk"
 
 samples = [os.path.basename(f).replace(".fastq.gz", "") for f in glob.glob(os.path.join(config["base_dir"], "data", "fastq", "*.fastq.gz"))]
-print(f"Detected samples: {samples}")
+runname = config["runname"]
+print(f"Run: {runname}\nDetected samples: {samples}")
 
 rule all:
     input:
-        "results/report.zip"  
+        f"results/{runname}_report.zip"  
 
 rule decompress_fastq:
     input:
@@ -26,7 +28,7 @@ rule convert_fastq_to_fasta:
     input:
         "{base_dir}/data/fastq/{sample}.fastq"
     output:
-        "{base_dir}/data/fastq/{sample}.fasta"
+        temp("{base_dir}/data/fastq/{sample}.fasta")
     log:
         "{base_dir}/logs/convert_fastq_to_fasta/{sample}.log"    
     conda:
@@ -109,7 +111,7 @@ rule integrate_blast_data:
     output:
         intermed_card_results = temp("{base_dir}/results/{sample}/{part}/intermed_card_results.csv"),
         intermed_silva_results = temp("{base_dir}/results/{sample}/{part}/intermed_silva_results.csv"),
-        integrated_data = temp("{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv")
+        integrated_data = "{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv"
     params:
         chunksize = config["chunksize"]
     log:
@@ -172,7 +174,7 @@ rule genera_abundance_table:
         filtered_data = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
-            "{base_dir}/results/boxplots/combined_genus_abundance.csv",
+            "{base_dir}/results/abundance/combined_genus_abundance.csv",
             caption = "../report/genus_top_hits.rst",
             category="3. General data"
         )
@@ -305,11 +307,13 @@ rule snakemake_report:
     input:       
         expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),        
         expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),        
-        expand("{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html", base_dir=config["base_dir"]),            
+        expand("{base_dir}/results/abundance/reads_per_found_AMR.csv", base_dir=config["base_dir"]),            
         expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png", base_dir=config["base_dir"]),        
         expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png", base_dir=config["base_dir"]),        
         expand("{base_dir}/results/boxplots/combined_allength_boxplot.png", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/qc/multiqc.html", base_dir=config["base_dir"]),        
     output:
-        "results/report.zip"     
+        f"results/{runname}_report.zip"     
     shell:
         "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css"
