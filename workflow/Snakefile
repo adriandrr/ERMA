@@ -1,16 +1,41 @@
 import glob
 import os
+import re
 configfile: "config/config.yaml"
 
 include: "rules/common.smk"
+include: "rules/qc.smk"
 include: "rules/load_db.smk"
 
-samples = [os.path.basename(f).replace(".fastq.gz", "") for f in glob.glob(os.path.join(config["base_dir"], "data", "fastq", "*.fastq.gz"))]
-print(f"Detected samples: {samples}")
+reads = [os.path.basename(f).replace(".fastq.gz", "") for f in glob.glob(os.path.join(config["base_dir"], "data", "fastq", "*.fastq.gz"))]
+
+if config["seq_tech"] == "Illumina":
+    samples = list(set(re.split(r'_R\d_', r)[0] for r in reads))
+elif config["seq_tech"] == "ONT":
+    samples = reads
+else:
+    raise ValueError("Invalid sequencing technology specified. Check config file and README.")
+
+runname = config["runname"]
+print(f"Run: {runname}\nDetected samples: {samples}")
 
 rule all:
     input:
-        "results/report.zip"  
+        f"results/{runname}_report.zip"  
+
+if config["seq_tech"] == "Illumina":
+    rule merge_fastq:
+        input:
+            r1="{base_dir}/data/fastq/{sample}_R1_001.fastq.gz",
+            r2="{base_dir}/data/fastq/{sample}_R2_001.fastq.gz"
+        output:
+            out = "{base_dir}/data/fastq/{sample}.fastq.gz"
+        log:
+            "{base_dir}/logs/merge_fastq/{sample}.log"
+        conda:
+            "envs/python.yaml"                
+        shell:
+            "NGmerge -1 {input.r1} -2 {input.r2} -o {output.out}"
 
 rule decompress_fastq:
     input:
@@ -26,7 +51,7 @@ rule convert_fastq_to_fasta:
     input:
         "{base_dir}/data/fastq/{sample}.fastq"
     output:
-        "{base_dir}/data/fastq/{sample}.fasta"
+        temp("{base_dir}/data/fastq/{sample}.fasta")
     log:
         "{base_dir}/logs/convert_fastq_to_fasta/{sample}.log"    
     conda:
@@ -36,9 +61,9 @@ rule convert_fastq_to_fasta:
 
 rule split_fasta_file:
     input:
-        expand("{base_dir}/data/fastq/{sample}.fasta",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
+        "{base_dir}/data/fastq/{sample}.fasta"
     output:
-        expand("{base_dir}/data/fastq/{sample}.part_{part}.fasta",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
+        temp("{base_dir}/data/fastq/{sample}.part_{part}.fasta")
     params:
         outdir = config["base_dir"],
         num_parts = config["num_parts"],
@@ -49,7 +74,7 @@ rule split_fasta_file:
 
 rule blast_card:
     input:
-        fasta = "{base_dir}/data/fastq/{sample}.part_{part}.fasta",
+        fasta = expand("{base_dir}/data/fastq/{sample}.part_{part}.fasta",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())),
         card = "{base_dir}/data/blast_db/card_db.pdb"
     output:
         card_results = "{base_dir}/results/{sample}/{part}/card_results.txt"
@@ -109,7 +134,7 @@ rule integrate_blast_data:
     output:
         intermed_card_results = temp("{base_dir}/results/{sample}/{part}/intermed_card_results.csv"),
         intermed_silva_results = temp("{base_dir}/results/{sample}/{part}/intermed_silva_results.csv"),
-        integrated_data = temp("{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv")
+        integrated_data = "{base_dir}/results/{sample}/{part}/integrated_filtered_results.csv"
     params:
         chunksize = config["chunksize"]
     log:
@@ -172,7 +197,7 @@ rule genera_abundance_table:
         filtered_data = expand("{base_dir}/results/{sample}/{part}/filtered_results.csv",base_dir=config["base_dir"],sample=samples,part=get_numpart_list())
     output:
         report(
-            "{base_dir}/results/boxplots/combined_genus_abundance.csv",
+            "{base_dir}/results/abundance/combined_genus_abundance.csv",
             caption = "../report/genus_top_hits.rst",
             category="3. General data"
         )
@@ -188,7 +213,7 @@ rule genera_abundance_table:
 
 rule abundance_bubble_plot:
     input:
-        abundance_data = "{base_dir}/results/boxplots/combined_genus_abundance.csv",
+        abundance_data = "{base_dir}/results/abundance/combined_genus_abundance.csv",
     output:
         report(
             "{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html",
@@ -201,7 +226,7 @@ rule abundance_bubble_plot:
             category="0. Main result"
         ),
     params:
-        abundance_filter = 0.0001
+        abundance_filter = 0.001
     log:
         "{base_dir}/logs/genera_abundance_plot.log"                  
     conda:
@@ -305,11 +330,13 @@ rule snakemake_report:
     input:       
         expand("{base_dir}/results/{sample}/genus_distribution_plot.html", sample=samples,base_dir=config["base_dir"]),        
         expand("{base_dir}/results/{sample}/genus_idt_per_genus_plot.png", sample=samples,base_dir=config["base_dir"]),        
-        expand("{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/abundance/combined_genus_abundance_bubbleplot.html", base_dir=config["base_dir"]),            
+        expand("{base_dir}/results/abundance/reads_per_found_AMR.csv", base_dir=config["base_dir"]),            
         expand("{base_dir}/results/boxplots/combined_evalue_boxplot.png", base_dir=config["base_dir"]),        
         expand("{base_dir}/results/boxplots/combined_percidt_boxplot.png", base_dir=config["base_dir"]),        
         expand("{base_dir}/results/boxplots/combined_allength_boxplot.png", base_dir=config["base_dir"]),        
+        expand("{base_dir}/results/qc/multiqc.html", base_dir=config["base_dir"]),        
     output:
-        "results/report.zip"     
+        f"results/{runname}_report.zip"     
     shell:
         "snakemake --nolock --report {output} --report-stylesheet config/custom-stylesheet.css"

@@ -4,6 +4,7 @@ data/fastq/*
 !.gitkeep
 logs/*
 results/*
+results*
 .gitignore
 .gitattributes
 .editorconfig

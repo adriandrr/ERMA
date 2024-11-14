@@ -72,7 +72,7 @@ def filter_blast_results(input_file, output_file, min_similarity):
     # Filter results based on percentage identity and alignment length for ABR
     abr_data = df[
         (df['part'] == 'ABR') &
-        (df['perc_identity'] > float(min_similarity)) &
+        (df['perc_identity'] > float(min_similarity) * 100) &
         (df['orientation'] == 'forward')
     ]
     abr_data = abr_data.groupby("query_id").apply(process_orientation_and_counts).reset_index(drop=True)
