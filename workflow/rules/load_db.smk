@@ -1,6 +1,6 @@
 rule get_16S_db:
     output:
-        seq = "{base_dir}/data/silva_db/silva_seq.fasta.gz",
+        seq = "{base_dir}/data/silva_db/silva_seq_RNA.fasta.gz",
         tax = "{base_dir}/data/silva_db/silva_tax.txt.gz"
     params:
         seq = config["silva"]["download-path-seq"],
@@ -14,16 +14,16 @@ rule get_16S_db:
         """
         mkdir -p {params.path};
         cd {params.path};
-        wget -O silva_seq.fasta.gz {params.seq} 2> {log};
+        wget -O silva_seq_RNA.fasta.gz {params.seq} 2> {log};
         wget -O silva_tax.txt.gz {params.tax} 2>> {log};
         """
 
 rule unzip_silva_db:
     input:
-        seq = "{base_dir}/data/silva_db/silva_seq.fasta.gz",
+        seq = "{base_dir}/data/silva_db/silva_seq_RNA.fasta.gz",
         tax = "{base_dir}/data/silva_db/silva_tax.txt.gz"
     output:
-        seq = temp("{base_dir}/data/silva_db/silva_seq.fasta"),
+        seq = temp("{base_dir}/data/silva_db/silva_seq_RNA.fasta"),
         tax = temp("{base_dir}/data/silva_db/silva_tax.txt")
     log:
         "{base_dir}/logs/unzip_silva_db/log.log"
@@ -32,6 +32,16 @@ rule unzip_silva_db:
         gzip -dk {input.seq} 2> {log};
         gzip -dk {input.tax} 2>> {log};
         """
+
+rule translate_silva_db:
+    input:
+        seq = "{base_dir}/data/silva_db/silva_seq_RNA.fasta"
+    output:
+        seq = "{base_dir}/data/silva_db/silva_seq.fasta"
+    conda:
+        "../envs/python.yaml"          
+    shell:
+        "seqtk seq -r {input.seq} > {output.seq}"
 
 rule get_card_db:
     output:

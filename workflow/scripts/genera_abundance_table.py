@@ -15,16 +15,21 @@ def process_combined_data(combined_data, sample_name):
     abr_data = combined_data[combined_data["part"] == "ABR"]
     sixteen_s_data = combined_data[combined_data["part"] == "16S"]
     
+    # Prepare to merge only unique hits
+    unique_abr_data = abr_data[['query_id', 'AMR Gene Family']].drop_duplicates()
+    unique_sixteen_s_data = sixteen_s_data[['query_id', 'path']].drop_duplicates()
+    
     # Merge on query_id to associate AMR Gene Family with genus information from 16S data
     merged_data = pd.merge(
-        abr_data[['query_id', 'AMR Gene Family']], 
-        sixteen_s_data[['query_id', 'path']],
+        unique_abr_data[['query_id', 'AMR Gene Family']], 
+        unique_sixteen_s_data[['query_id', 'path']],
         on='query_id', 
         how='inner'
     )
     
     # Extract genus from the path in 16S data and add the sample name
     merged_data['genus'] = merged_data['path'].apply(lambda x: x.split(';')[-2] if pd.notna(x) else None)
+    merged_data = merged_data[merged_data["genus"] != "Incertae Sedis"]
     merged_data['sample'] = sample_name
     
     # Calculate genus counts per AMR Gene Family and genus for the sample

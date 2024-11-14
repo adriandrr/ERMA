@@ -22,7 +22,7 @@ rule multiqc_report:
     output:
         report(
             "{base_dir}/results/qc/multiqc.html",
-            caption="../report/genus_top_hits.rst",
+            caption="../../report/genus_top_hits.rst",
             htmlindex="multiqc.html",
             category="4. QC",
         ),

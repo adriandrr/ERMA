@@ -6,7 +6,7 @@ def create_bubble_plots(df, abundance_threshold, output1,output2):
     # Iterate over unique AMR Gene Families
     # Filter data for the current AMR Gene Family
     df = pd.read_csv(df,header=0,sep=',')
-    total_counts_per_abr = df.groupby('AMR Gene Family')['total_genus_count'].sum()
+    total_counts_per_abr = df.groupby('AMR Gene Family')['genus_count'].sum()
     total_counts_per_abr.to_csv(output2)
     top_abr = total_counts_per_abr.idxmax()
     top_abr_data = df[df['AMR Gene Family'] == top_abr]
