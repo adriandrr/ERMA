@@ -15,7 +15,7 @@ def generate_genus_distribution_plot(input_files, output_file,output2, sample_na
     j=0
     for input_file in input_files:
         df = pd.read_csv(input_file, sep=",", usecols=necessary_columns, header=0)
-        
+        df = df.drop_duplicates()
         # Split and merge ABR and 16S data by query_id
         abr = df[df["part"] == "ABR"]
         sixteen_s = df[df["part"] == "16S"]

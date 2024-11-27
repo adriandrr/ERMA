@@ -9,7 +9,6 @@ include: "rules/load_db.smk"
 include: "rules/blast_and_process.smk"
 include: "rules/create_boxplots.smk"
 include: "rules/main_results.smk"
-include: "rules/preprocess.smk"
 include: "rules/qc.smk"
 
 # Build a list of all "fastq.gz" files in "/ERMA/data/fastq" which will be processed subsequently
@@ -21,8 +20,10 @@ seq_tech = "".join(config["seq_tech"])
 
 if seq_tech == "Illumina":
     samples = list(set([re.split(r'_R\d_',r)[0] for r in reads]))
+    include: "rules/preprocess_Illumina.smk"
 elif seq_tech == "ONT":
     samples = reads
+    include: "rules/preprocess_ONT.smk"
 else:
     raise ValueError("Invalid sequencing technology specified. Check config file and README.")
 
