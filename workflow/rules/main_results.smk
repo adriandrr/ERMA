@@ -1,7 +1,17 @@
+runname = "".join(config["runname"])
+seq_tech = "".join(config["seq_tech"])
+
+if seq_tech == "Illumina":
+    samples = list(set([re.split(r'_R\d_',r)[0] for r in reads]))
+elif seq_tech == "ONT":
+    samples = reads
+else:
+    raise ValueError("Invalid sequencing technology specified. Check config file and README.")
+
 rule generate_genus_distribution_plot:
     input:
-        filtered_data = expand("{{base_dir}}/results/{{sample}}/{part}/filtered_results.csv", 
-                                part=get_numpart_list())
+        filtered_data = expand("{{base_dir}}/results/{sample}/{part}/filtered_results.csv", 
+                                sample=samples,part=get_numpart_list())
     output:
         report(
             "{base_dir}/results/{sample}/genus_distribution_plot.html",
@@ -11,7 +21,7 @@ rule generate_genus_distribution_plot:
         ),
         "{base_dir}/results/{sample}/combined_df.csv",
     params:
-        sample_name = "{sample}"
+        sample_name = samples,
     log:
         "{base_dir}/logs/generate_genus_distribution_plot/{sample}.log"         
     conda:
